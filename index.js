@@ -22,20 +22,6 @@ const likesSchema = new mongoose.Schema({
 
 const LikeModel = mongoose.model('Like', likesSchema);
 
-// const dubanCounter = new LikeModel({
-//   itemId: "Duban_counter",
-// });
-
-// try {
-//   async function createData() {
-//     await dubanCounter.save();
-//     response.send(dubanCounter);
-//   };
-//   createData();
-// } catch (error) {
-//   response.status(500).send(error);
-// };
-
 app.get("/", (req, res) => {
   res.send("Hi");
 });
@@ -50,17 +36,28 @@ app.get("/reckon", async (req, res) => {
   };
 });
 
-app.get('/countplus', async (req, res) => {
-  const { itemId } = req.params;
-
-  const like = await LikeModel.find({itemId: "Duban_counter"});
-  like.count++;
-  await like.save();
+app.post("/countplus/:id", async (req, res) => {
   try {
-    res.json({"count": like.count});
-  } catch (err) {
-    res.status(500).send(err)
+  const itemId = req.params.id;
+
+  const updateLike = await LikeModel.findOneAndUpdate(
+    {itemId: itemId},
+    {$inc: { count: 1 }},
+    {new: true },
+  );
+
+  res.json(updateLike);
+  } catch(err) {
+    next(err);
   };
+
+  // await like.save();
+  // try {
+  //   const like = await LikeModel.find({itemId: itemId});
+  //   res.json({"like": like});
+  // } catch (err) {
+  //   res.status(500).send(err);
+  // };
 });
 
 app.listen(5000, () => {
