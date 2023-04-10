@@ -1,19 +1,70 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
-const mongoose = require('mongoose');
+import dotenv from "dotenv";
+import express from "express";
+import bodyParser from "body-parser";
+import mongoose from "mongoose";
+import cors from "cors";
+import morgan from "morgan";
+import multer from "multer";
+import helmet from "helmet";
+import path from "path";
+import { fileURLToPath } from "url";
+import authRoutes from "./routes/auth.js";
+import userRoutes from "./routes/users.js";
+import postRoutes from "./routes/posts.js";
+import { verifyToken } from "./middleware/auth.js";
+import { register } from "./controllers/auth.js";
+import { createPost } from "./controllers/posts.js";
+import User from "./models/User.js";
+import Post from "./models/Post.js";
+import { users, posts } from "./data/index.js";
+
+// * CONFIGURATIONS * //
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config();
 
 const app = express();
-app.use(cors());
 app.use(express.json());
-app.use(morgan('short'))
+app.use(helmet());
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
+app.use(morgan('common'));
+app.use(bodyParser.json({ limit: "30mb", extended: true }));
+app.use(bodyParser.urlencoded({ limit: "30mb", extended: true }));
+app.use(cors());
+app.use("/assets", express.static(path.join(__dirname, "public/assets")));
 
-mongoose.connect(process.env.DATABASE_URL);
+// * FILE STORAGE * //
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, "public/assets");
+  },
+  filenane: function(req, file, cb) {
+    cb(null, file.originalname)
+  }
+});
+const upload = multer({ storage }); 
 
-const db = mongoose.connection;
-db.on('error', (err) => console.error('connection error', err));
-db.once('open', () => console.log('Connected to MongoDB'));
+// *  ROUTE WITH FILES * //
+app.post("/auth/register", upload.single("picture"), register);
+app.post("/posts", verifyToken, upload.single("picture"), createPost);
+
+// * ROUTE * //
+app.use("/auth", authRoutes);
+app.use("/users", userRoutes);
+app.use("/posts", postRoutes);
+
+// * MONGOOSE SETUP * //
+const PORT = process.env.PORT
+mongoose.connect(process.env.DATABASE_URL, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  app.listen(PORT, (req, res) => console.log(`Server Listen on Port: ${PORT}.`));
+
+  // * ADD FAKE DATA AT ONE TIME * //
+  User.insertMany(users);
+  Post.insertMany(posts);
+}).catch((error) => console.log(`${error} did not connet`));
 
 const likesSchema = new mongoose.Schema({
   itemId: { type: String, required: true },
@@ -50,16 +101,4 @@ app.post("/countplus/:id", async (req, res) => {
   } catch(err) {
     next(err);
   };
-
-  // await like.save();
-  // try {
-  //   const like = await LikeModel.find({itemId: itemId});
-  //   res.json({"like": like});
-  // } catch (err) {
-  //   res.status(500).send(err);
-  // };
-});
-
-app.listen(5000, () => {
-  console.log('Server started on port 5000 -- ' + Date(Date.now()).toString());
 });
