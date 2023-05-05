@@ -11,12 +11,17 @@ import { fileURLToPath } from "url";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import postRoutes from "./routes/posts.js";
+import countRoutes from "./routes/count.js";
+import guestRoutes from "./routes/guest.js";
+import dobanRoutes from "./routes/doban.js";
 import { verifyToken } from "./middleware/auth.js";
 import { register } from "./controllers/auth.js";
 import { createPost } from "./controllers/posts.js";
-import User from "./models/User.js";
-import Post from "./models/Post.js";
-import { users, posts } from "./data/index.js";
+// import User from "./models/User.js";
+// import Post from "./models/Post.js";
+// import Doban from "./models/Doban.js";
+// import { users, posts } from "./data/index.js";
+// import { videos } from "./data/doban.js";
 
 // * CONFIGURATIONS * //
 const __filename = fileURLToPath(import.meta.url);
@@ -53,6 +58,15 @@ app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/posts", postRoutes);
 
+app.use("/guest", guestRoutes);
+app.use("/count", countRoutes);
+app.use("/doban", dobanRoutes);
+
+app.get("/test", (req, res) => {
+  const ipAddress = req.socket.remoteAddress;
+  res.send(ipAddress);
+});
+
 // * MONGOOSE SETUP * //
 const PORT = process.env.PORT
 mongoose.connect(process.env.DATABASE_URL, {
@@ -62,43 +76,7 @@ mongoose.connect(process.env.DATABASE_URL, {
   app.listen(PORT, (req, res) => console.log(`Server Listen on Port: ${PORT}.`));
 
   // * ADD FAKE DATA AT ONE TIME * //
-  User.insertMany(users);
-  Post.insertMany(posts);
+  // User.insertMany(users);
+  // Post.insertMany(posts);
+  // Doban.insertMany(videos);
 }).catch((error) => console.log(`${error} did not connet`));
-
-const likesSchema = new mongoose.Schema({
-  itemId: { type: String, required: true },
-  count: { type: Number, default: 0 }
-});
-
-const LikeModel = mongoose.model('Like', likesSchema);
-
-app.get("/", (req, res) => {
-  res.send("Hi");
-});
-
-app.get("/reckon", async (req, res) => {
-  const reckon = await LikeModel.find({itemId: "Duban_counter"});
-
-  try {
-    res.json({"count": reckon[0].count});
-  } catch (err) {
-    res.status(500).send(err)
-  };
-});
-
-app.post("/countplus/:id", async (req, res) => {
-  try {
-  const itemId = req.params.id;
-
-  const updateLike = await LikeModel.findOneAndUpdate(
-    {itemId: itemId},
-    {$inc: { count: 1 }},
-    {new: true },
-  );
-
-  res.json(updateLike);
-  } catch(err) {
-    next(err);
-  };
-});

@@ -1,0 +1,36 @@
+const likesSchema = new mongoose.Schema({
+  itemId: { type: String, required: true },
+  count: { type: Number, default: 0 }
+});
+
+const LikeModel = mongoose.model('Like', likesSchema);
+
+app.get("/", (req, res) => {
+  res.send("Hi");
+});
+
+app.get("/reckon", async (req, res) => {
+  const reckon = await LikeModel.find({itemId: "Duban_counter"});
+
+  try {
+    res.json({"count": reckon[0].count});
+  } catch (err) {
+    res.status(500).send(err)
+  };
+});
+
+app.post("/countplus/:id", async (req, res) => {
+  try {
+  const itemId = req.params.id;
+
+  const updateLike = await LikeModel.findOneAndUpdate(
+    {itemId: itemId},
+    {$inc: { count: 1 }},
+    {new: true },
+  );
+
+  res.json(updateLike);
+  } catch(err) {
+    next(err);
+  };
+});
